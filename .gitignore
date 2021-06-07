@@ -3,3 +3,5 @@ dev/
 composer.lock
 .phpunit.result.cache
 coverage.clover
+.idea
+.idea/
