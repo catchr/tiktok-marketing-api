@@ -4,10 +4,33 @@ declare(strict_types=1);
 
 namespace Promopult\TikTokMarketingApi\Service;
 
+use bandwidthThrottle\tokenBucket\BlockingConsumer;
+use bandwidthThrottle\tokenBucket\Rate;
+use bandwidthThrottle\tokenBucket\storage\FileStorage;
+use bandwidthThrottle\tokenBucket\TokenBucket;
 use Promopult\TikTokMarketingApi\Exception\StatusFailedResponse;
 
 final class Report extends \Promopult\TikTokMarketingApi\AbstractService
 {
+
+    /**
+     * Report constructor.
+     * @param \Promopult\TikTokMarketingApi\CredentialsInterface $credentials
+     * @param \Psr\Http\Client\ClientInterface $httpClient
+     * @throws \bandwidthThrottle\tokenBucket\storage\StorageException
+     */
+    public function __construct(
+        \Promopult\TikTokMarketingApi\CredentialsInterface $credentials,
+        \Psr\Http\Client\ClientInterface $httpClient
+    )
+    {
+        parent::__construct($credentials, $httpClient);
+        $storage = new FileStorage(__DIR__ . "/../../config/buckets/api-report.bucket");
+        $rate    = new Rate(10, Rate::SECOND);
+        $this->bucket = new TokenBucket(10, $rate, $storage);
+        $this->consumer = new BlockingConsumer($this->bucket);
+        $this->bucket->bootstrap(10);
+    }
 
     /**
      * Create an Integrated Report
@@ -135,8 +158,11 @@ final class Report extends \Promopult\TikTokMarketingApi\AbstractService
         );
 
         $taskId = $report['data']['task_id'];
-
+        $statusCheck = null;
         do {
+            if($statusCheck) {
+                usleep(500000);
+            }
             $statusCheck = $this->requestApi(
                 'GET',
                 '/open_api/v1.2/reports/task/check/',

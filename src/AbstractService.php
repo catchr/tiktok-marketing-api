@@ -4,8 +4,21 @@ declare(strict_types=1);
 
 namespace Promopult\TikTokMarketingApi;
 
+use bandwidthThrottle\tokenBucket\BlockingConsumer;
+use bandwidthThrottle\tokenBucket\TokenBucket;
+
 abstract class AbstractService implements \Promopult\TikTokMarketingApi\ServiceInterface
 {
+    /**
+     * @var TokenBucket|null
+     */
+    protected $bucket;
+
+    /**
+     * @var BlockingConsumer|null
+     */
+    protected $consumer;
+
     /**
      * @var CredentialsInterface
      */
@@ -29,6 +42,9 @@ abstract class AbstractService implements \Promopult\TikTokMarketingApi\ServiceI
         string $endpoint,
         array $args = []
     ): array {
+        if($this->consumer) {
+            $this->consumer->consume(1);
+        }
         $httpMethod = strtolower($httpMethod);
 
         $args = array_filter($args);

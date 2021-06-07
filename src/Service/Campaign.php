@@ -4,8 +4,27 @@ declare(strict_types=1);
 
 namespace Promopult\TikTokMarketingApi\Service;
 
+use bandwidthThrottle\tokenBucket\BlockingConsumer;
+use bandwidthThrottle\tokenBucket\Rate;
+use bandwidthThrottle\tokenBucket\storage\FileStorage;
+use bandwidthThrottle\tokenBucket\TokenBucket;
+
 final class Campaign extends \Promopult\TikTokMarketingApi\AbstractService
 {
+
+    public function __construct(
+        \Promopult\TikTokMarketingApi\CredentialsInterface $credentials,
+        \Psr\Http\Client\ClientInterface $httpClient
+    )
+    {
+        parent::__construct($credentials, $httpClient);
+        $storage = new FileStorage(__DIR__ . "/../../config/buckets/api-campaign.bucket");
+        $rate    = new Rate(10, Rate::SECOND);
+        $this->bucket = new TokenBucket(10, $rate, $storage);
+        $this->consumer = new BlockingConsumer($this->bucket);
+        $this->bucket->bootstrap(10);
+    }
+
     /**
      * Getting Campaigns
      *

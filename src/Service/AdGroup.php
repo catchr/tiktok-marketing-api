@@ -4,8 +4,31 @@ declare(strict_types=1);
 
 namespace Promopult\TikTokMarketingApi\Service;
 
+use bandwidthThrottle\tokenBucket\BlockingConsumer;
+use bandwidthThrottle\tokenBucket\Rate;
+use bandwidthThrottle\tokenBucket\storage\FileStorage;
+use bandwidthThrottle\tokenBucket\TokenBucket;
+
 final class AdGroup extends \Promopult\TikTokMarketingApi\AbstractService
 {
+    /**
+     * AdGroup constructor.
+     * @param \Promopult\TikTokMarketingApi\CredentialsInterface $credentials
+     * @param \Psr\Http\Client\ClientInterface $httpClient
+     * @throws \bandwidthThrottle\tokenBucket\storage\StorageException
+     */
+    public function __construct(
+        \Promopult\TikTokMarketingApi\CredentialsInterface $credentials,
+        \Psr\Http\Client\ClientInterface $httpClient
+    )
+    {
+        parent::__construct($credentials, $httpClient);
+        $storage = new FileStorage(__DIR__ . "/../../config/buckets/api-adgroup.bucket");
+        $rate    = new Rate(10, Rate::SECOND);
+        $this->bucket = new TokenBucket(10, $rate, $storage);
+        $this->consumer = new BlockingConsumer($this->bucket);
+        $this->bucket->bootstrap(10);
+    }
     /**
      * @param int $advertiserId         Advertiser ID
      * @param array|null $fields        Fields to be returned. When not specified, all fields are returned by default.
